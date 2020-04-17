@@ -1,0 +1,18 @@
+[Unit]
+Description=Blocking IP in nftables by country and black lists
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/nft-blackhole.py start
+ExecStop=/usr/bin/nft-blackhole.py stop
+
+ExecRestart=/usr/bin/nft-blackhole.py restart
+ExecReload=/usr/bin/nft-blackhole.py reload
+
+User=root
+
+[Install]
+WantedBy=multi-user.target
