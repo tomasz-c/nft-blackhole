@@ -9,7 +9,6 @@ RemainAfterExit=yes
 ExecStart=/usr/bin/nft-blackhole.py start
 ExecStop=/usr/bin/nft-blackhole.py stop
 
-ExecRestart=/usr/bin/nft-blackhole.py restart
 ExecReload=/usr/bin/nft-blackhole.py reload
 
 User=root
