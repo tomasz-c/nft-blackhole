@@ -1,0 +1,9 @@
+[Unit]
+Description="Update blackhole lists"
+
+[Timer]
+OnBootSec=15min
+OnUnitActiveSec=6h
+
+[Install]
+WantedBy=multi-user.target

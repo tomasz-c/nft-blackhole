@@ -56,6 +56,8 @@ For example:
     /usr/share/nft-blackhole/nft-blackhole.template
     /etc/nft-blackhole.conf
     /usr/lib/systemd/system/nft-blackhole.service
+    /usr/lib/systemd/system/nft-blackhole-reload.service
+    /usr/lib/systemd/system/nft-blackhole-reload.timer
 
 ## Configuration
 #### Set the configuration in a file
@@ -81,13 +83,19 @@ For example:
 ### List table and sets for blackhole
     nft list table inet blackhole
 ### Refresh lists
+#### Manual
 
     /usr/bin/nft-blackhole.py reload
     systemctl reload nft-blackhole.service
-    
-or add to root crontab e.g.
+
+#### Crontab
     
     0 */6 * * * systemctl reload nft-blackhole.service
+
+#### Systemd Timer
+
+    systemctl enable --now nft-blackhole-reload.service
+    systemctl list-timers
 
 ## Credits
 [country-ip-blocks](https://github.com/herrbischoff/country-ip-blocks) - CIDR country-level IP lists,
