@@ -94,8 +94,8 @@ For example:
 
 #### Systemd Timer
 
-    systemctl enable --now nft-blackhole-reload.service
-    systemctl list-timers
+    systemctl enable --now nft-blackhole-reload.timer
+    systemctl list-timers --all
 
 ## Credits
 [country-ip-blocks](https://github.com/herrbischoff/country-ip-blocks) - CIDR country-level IP lists,

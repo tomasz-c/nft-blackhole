@@ -1,10 +1,8 @@
 [Unit]
-Description=Update nft blackhole table
+Description=Reload nft-blackhole service
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=oneshot
 ExecStart=/usr/bin/nft-blackhole.py reload
-
-User=root
