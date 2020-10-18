@@ -143,7 +143,7 @@ def whitelist_sets(reload=False):
     '''Create whitelist sets'''
     for ip_ver in IP_VER:
         set_name = f'whitelist-{ip_ver}'
-        set_list = ','.join(WHITELIST[ip_ver])
+        set_list = ', '.join(WHITELIST[ip_ver])
         nft_set = (Template(SET_TEMPLATE).substitute(ip_ver=f'ip{ip_ver}', set_name=set_name, ip_list=set_list))
         if reload:
             run(['nft', 'flush', 'set', 'inet', 'blackhole', set_name], check=False)
@@ -155,7 +155,7 @@ def blacklist_sets(reload=False):
     for ip_ver in IP_VER:
         set_name = f'blacklist-{ip_ver}'
         ip_list = get_blacklist(ip_ver)
-        set_list = ','.join(ip_list)
+        set_list = ', '.join(ip_list)
         nft_set = (Template(SET_TEMPLATE).substitute(ip_ver=f'ip{ip_ver}', set_name=set_name, ip_list=set_list))
         if reload:
             run(['nft', 'flush', 'set', 'inet', 'blackhole', set_name], check=False)
@@ -167,7 +167,7 @@ def country_sets(reload=False):
     for ip_ver in IP_VER:
         set_name = f'country-{ip_ver}'
         ip_list = get_country_ip_list(ip_ver)
-        set_list = ','.join(ip_list)
+        set_list = ', '.join(ip_list)
         nft_set = (Template(SET_TEMPLATE).substitute(ip_ver=f'ip{ip_ver}', set_name=set_name, ip_list=set_list))
         if reload:
             run(['nft', 'flush', 'set', 'inet', 'blackhole', set_name], check=False)
