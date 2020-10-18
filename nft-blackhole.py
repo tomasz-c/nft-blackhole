@@ -1,4 +1,4 @@
-#!/bin/python
+#!/usr/bin/env python3
 
 '''Script to blocking IP in nftables by country and black lists'''
 
