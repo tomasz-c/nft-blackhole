@@ -1,4 +1,4 @@
-#!/bin/python
+#!/usr/bin/env python3
 
 '''Script to blocking IP in nftables by country and black lists'''
 
@@ -15,6 +15,9 @@ import ssl
 from subprocess import run
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from yaml import safe_load
+import tempfile
+
+tmp_file = tempfile.NamedTemporaryFile()
 
 desc = 'Script to blocking IP in nftables by country and black lists'
 parser = argparse.ArgumentParser(description=desc)
@@ -73,7 +76,7 @@ urllib.request.install_opener(opener)
 
 def stop():
     '''Stopping nft-blackhole'''
-    run(['/usr/bin/nft', 'delete', 'table', 'inet', 'blackhole'], check=False)
+    run(['nft', 'delete', 'table', 'inet', 'blackhole'], check=False)
 
 def start():
     '''Starting nft-blackhole'''
@@ -81,7 +84,7 @@ def start():
     nft_conf = Template(nft_template).substitute(default_policy=default_policy,
                                                  block_policy=block_policy,
                                                  country_policy=country_policy)
-    run(['/usr/bin/nft', '-f', '-'], input=nft_conf.encode(), check=True)
+    run(['nft', '-f', '-'], input=nft_conf.encode(), check=True)
 
 
 def get_urls(urls, do_filter=False):
@@ -143,36 +146,42 @@ def whitelist_sets(reload=False):
     '''Create whitelist sets'''
     for ip_ver in IP_VER:
         set_name = f'whitelist-{ip_ver}'
-        set_list = ','.join(WHITELIST[ip_ver])
+        set_list = ', '.join(WHITELIST[ip_ver])
         nft_set = (Template(SET_TEMPLATE).substitute(ip_ver=f'ip{ip_ver}', set_name=set_name, ip_list=set_list))
+        with open(tmp_file.name, 'w') as f:
+            f.write(nft_set)
         if reload:
-            run(['/usr/bin/nft', 'flush', 'set', 'inet', 'blackhole', set_name], check=False)
+            run(['nft', 'flush', 'set', 'inet', 'blackhole', set_name], check=False)
         if WHITELIST[ip_ver]:
-            run(['/usr/bin/nft', '-f', '-'], input=nft_set.encode(), check=True)
+            run(['nft', '-f', tmp_file.name], check=True)
 
 def blacklist_sets(reload=False):
     '''Create blacklist sets'''
     for ip_ver in IP_VER:
         set_name = f'blacklist-{ip_ver}'
         ip_list = get_blacklist(ip_ver)
-        set_list = ','.join(ip_list)
+        set_list = ', '.join(ip_list)
         nft_set = (Template(SET_TEMPLATE).substitute(ip_ver=f'ip{ip_ver}', set_name=set_name, ip_list=set_list))
+        with open(tmp_file.name, 'w') as f:
+            f.write(nft_set)
         if reload:
-            run(['/usr/bin/nft', 'flush', 'set', 'inet', 'blackhole', set_name], check=False)
+            run(['nft', 'flush', 'set', 'inet', 'blackhole', set_name], check=False)
         if ip_list:
-            run(['/usr/bin/nft', '-f', '-'], input=nft_set.encode(), check=True)
+            run(['nft', '-f', tmp_file.name], check=True)
 
 def country_sets(reload=False):
     '''Create country sets'''
     for ip_ver in IP_VER:
         set_name = f'country-{ip_ver}'
         ip_list = get_country_ip_list(ip_ver)
-        set_list = ','.join(ip_list)
+        set_list = ', '.join(ip_list)
         nft_set = (Template(SET_TEMPLATE).substitute(ip_ver=f'ip{ip_ver}', set_name=set_name, ip_list=set_list))
+        with open(tmp_file.name, 'w') as f:
+            f.write(nft_set)
         if reload:
-            run(['/usr/bin/nft', 'flush', 'set', 'inet', 'blackhole', set_name], check=False)
+            run(['nft', 'flush', 'set', 'inet', 'blackhole', set_name], check=False)
         if ip_list:
-            run(['/usr/bin/nft', '-f', '-'], input=nft_set.encode(), check=True)
+            run(['nft', '-f', tmp_file.name], check=True)
 
 
 # Main

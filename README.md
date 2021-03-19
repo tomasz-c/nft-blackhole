@@ -44,6 +44,22 @@ For example:
     yay -S nft-blackhole
     pikaur -S nft-blackhole
 
+### Debian Linux Users
+Tested with Debian buster 10
+##### Install requirements
+
+    sudo apt install nftables python3-yaml
+
+##### Install files
+
+    sudo cp nft-blackhole.conf /etc/
+    sudo cp nft-blackhole.py   /usr/bin/
+    sudo mkdir /usr/share/nft-blackhole
+    sudo cp nft-blackhole.template /usr/share/nft-blackhole/
+    sudo cp nft-blackhole.service        /lib/systemd/system/
+    sudo cp nft-blackhole-reload.service /lib/systemd/system/
+    sudo cp nft-blackhole-reload.timer   /lib/systemd/system/
+
 ### Manual
 ##### Requirements
 - nftables
