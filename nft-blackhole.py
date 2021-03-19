@@ -31,6 +31,11 @@ WHITELIST = config['WHITELIST']
 BLACKLIST = config['BLACKLIST']
 COUNTRY_LIST = config['COUNTRY_LIST']
 
+# Correct incorrect YAML parsing of NO (Norway)
+# It should be the string 'no', but YAML interprets it as False
+while False in COUNTRY_LIST:
+    COUNTRY_LIST[COUNTRY_LIST.index(False)] = 'no'
+
 SET_TEMPLATE = ('table inet blackhole {\n\tset ${set_name} {\n\t\ttype ${ip_ver}_addr\n'
                 '\t\tflags interval\n\t\tauto-merge\n\t\telements = { ${ip_list} }\n\t}\n}')
 
