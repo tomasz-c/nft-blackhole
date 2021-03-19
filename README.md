@@ -1,5 +1,3 @@
-
-
 # nft-blackhole
 Script / daemon to blocking IP in nftables by country and black lists.
 
@@ -8,6 +6,7 @@ Script / daemon to blocking IP in nftables by country and black lists.
 - [Overview](#overview)
 - [Installation](#installation)
   - [Arch Linux Users](#arch-linux-users)
+  - [Debian Linux Users](#debian-linux-users)
   - [Manual](#manual)
 - [Configuration](#configuration)
     - [Set the configuration in a file](#set-the-configuration-in-a-file)
@@ -46,6 +45,11 @@ For example:
 
 ### Debian Linux Users
 Tested with Debian buster 10
+
+##### Download the debian-10 branch of this repository
+
+    git clone -b debian-10 https://github.com/tomasz-c/nft-blackhole.git
+
 ##### Install requirements
 
     sudo apt install nftables python3-yaml
