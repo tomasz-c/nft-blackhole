@@ -4,7 +4,7 @@
 
 __author__ = "Tomasz Cebula <tomasz.cebula@gmail.com>"
 __license__ = "MIT"
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 import argparse
 from sys import stderr
@@ -33,6 +33,7 @@ COUNTRY_LIST = config['COUNTRY_LIST']
 
 # Correct incorrect YAML parsing of NO (Norway)
 # It should be the string 'no', but YAML interprets it as False
+# This is a hack due to the lack of YAML 1.2 support by PyYAML
 while False in COUNTRY_LIST:
     COUNTRY_LIST[COUNTRY_LIST.index(False)] = 'no'
 
