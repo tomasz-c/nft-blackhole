@@ -32,6 +32,7 @@ Script / daemon to blocking IP in nftables by country and black lists.
 - blocking policy (reject, drop,)
 - network or IP addresses for the white list,
 - blacklist url addresses,
+- block oututput connections to blacklisted IPs,
 - list of countries,
 - policy for countries (accept, block)
 
