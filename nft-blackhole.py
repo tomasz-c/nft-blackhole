@@ -85,7 +85,9 @@ def start():
     nft_conf = Template(nft_template).substitute(default_policy=default_policy,
                                                  block_policy=block_policy,
                                                  country_policy=country_policy)
-    run(['nft', '-f', '-'], input=nft_conf.encode(), check=True)
+    with open(tmp_file.name, 'w') as f:
+        f.write(nft_conf)
+    run(['nft', '-f', tmp_file.name], check=True)
 
 
 def get_urls(urls, do_filter=False):
