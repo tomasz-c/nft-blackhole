@@ -4,7 +4,7 @@
 
 __author__ = "Tomasz Cebula <tomasz.cebula@gmail.com>"
 __license__ = "MIT"
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 import argparse
 from sys import stderr
@@ -48,6 +48,8 @@ OUTPUT_TEMPLATE = ('\tchain output {\n\t\ttype filter hook output priority -1; p
                    '\t\tip daddr @blacklist-v4 counter ${block_policy}\n'
                    '\t\tip6 daddr @blacklist-v6 counter ${block_policy}\n\t}').expandtabs()
 
+COUNTRY_EX_PORTS_TEMPLATE = 'meta l4proto { tcp, udp } th dport { ${country_ex_ports} } counter accept'
+
 IP_VER = []
 for ip_v in ['v4', 'v6']:
     if config['IP_VERSION'][ip_v]:
@@ -55,6 +57,7 @@ for ip_v in ['v4', 'v6']:
 
 BLOCK_POLICY = 'reject' if config['BLOCK_POLICY'] == 'reject' else 'drop'
 COUNTRY_POLICY = 'accept' if config['COUNTRY_POLICY'] == 'accept' else 'block'
+COUNTRY_EXCLUDE_PORTS = config['COUNTRY_EXCLUDE_PORTS']
 
 if COUNTRY_POLICY == 'block':
     default_policy = 'accept'
@@ -64,6 +67,12 @@ else:
     default_policy = BLOCK_POLICY
     block_policy = BLOCK_POLICY
     country_policy = 'accept'
+
+if COUNTRY_EXCLUDE_PORTS:
+    country_ex_ports = ', '.join(map(str, config['COUNTRY_EXCLUDE_PORTS']))
+    country_ex_ports_rule = Template(COUNTRY_EX_PORTS_TEMPLATE).substitute(country_ex_ports=country_ex_ports)
+else:
+    country_ex_ports_rule = ''
 
 if BLOCK_OUTPUT:
     chain_output = Template(OUTPUT_TEMPLATE).substitute(block_policy=block_policy)
@@ -95,6 +104,7 @@ def start():
     nft_template = open('/usr/share/nft-blackhole/nft-blackhole.template').read()
     nft_conf = Template(nft_template).substitute(default_policy=default_policy,
                                                  block_policy=block_policy,
+                                                 country_ex_ports_rule=country_ex_ports_rule,
                                                  country_policy=country_policy,
                                                  chain_output=chain_output)
 

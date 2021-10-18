@@ -43,6 +43,7 @@ table inet blackhole {
                 ip6 saddr @whitelist-v6 counter accept
                 ip saddr @blacklist-v4 counter ${block_policy}
                 ip6 saddr @blacklist-v6 counter ${block_policy}
+                ${country_ex_ports_rule}
                 ip saddr @country-v4 counter ${country_policy}
                 ip6 saddr @country-v6 counter ${country_policy}
                 counter
