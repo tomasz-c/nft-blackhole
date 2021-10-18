@@ -51,7 +51,7 @@ OUTPUT_TEMPLATE = ('\tchain output {\n\t\ttype filter hook output priority -1; p
                    '\t\tip daddr @blacklist-v4 counter ${block_policy}\n'
                    '\t\tip6 daddr @blacklist-v6 counter ${block_policy}\n\t}').expandtabs()
 
-COUNTRY_EX_PORTS_TEMPLATE = 'meta l4proto { tcp, udp } th dport { ${country_ex_ports} } counter accept'
+COUNTRY_EX_PORTS_TEMPLATE = 'meta l4proto { tcp, udp } @th,16,16 { ${country_ex_ports} } counter accept'
 
 IP_VER = []
 for ip_v in ['v4', 'v6']:
