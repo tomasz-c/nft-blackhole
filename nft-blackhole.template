@@ -47,4 +47,6 @@ table inet blackhole {
                 ip6 saddr @country-v6 counter ${country_policy}
                 counter
         }
+
+        ${chain_output}
 }
