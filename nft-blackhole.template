@@ -45,7 +45,6 @@ table inet blackhole {
                 ip6 saddr @blacklist-v6 counter ${block_policy}
                 ip saddr @country-v4 counter ${country_policy}
                 ip6 saddr @country-v6 counter ${country_policy}
-                ip protocol icmp accept
                 counter
         }
 }

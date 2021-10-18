@@ -4,7 +4,7 @@
 
 __author__ = "Tomasz Cebula <tomasz.cebula@gmail.com>"
 __license__ = "MIT"
-__version__ = "0.1.1"
+__version__ = "1.0.0"
 
 import argparse
 from sys import stderr
@@ -41,7 +41,7 @@ while False in COUNTRY_LIST:
     COUNTRY_LIST[COUNTRY_LIST.index(False)] = 'no'
 
 SET_TEMPLATE = ('table inet blackhole {\n\tset ${set_name} {\n\t\ttype ${ip_ver}_addr\n'
-                '\t\tflags interval\n\t\tauto-merge\n\t\telements = { ${ip_list} }\n\t}\n}')
+                '\t\tflags interval\n\t\tauto-merge\n\t\telements = { ${ip_list} }\n\t}\n}').expandtabs()
 
 IP_VER = []
 for ip_v in ['v4', 'v6']:
@@ -78,6 +78,7 @@ urllib.request.install_opener(opener)
 def stop():
     '''Stopping nft-blackhole'''
     run(['nft', 'delete', 'table', 'inet', 'blackhole'], check=False)
+
 
 def start():
     '''Starting nft-blackhole'''
@@ -158,6 +159,7 @@ def whitelist_sets(reload=False):
         if WHITELIST[ip_ver]:
             run(['nft', '-f', tmp_file.name], check=True)
 
+
 def blacklist_sets(reload=False):
     '''Create blacklist sets'''
     for ip_ver in IP_VER:
@@ -171,6 +173,7 @@ def blacklist_sets(reload=False):
             run(['nft', 'flush', 'set', 'inet', 'blackhole', set_name], check=False)
         if ip_list:
             run(['nft', '-f', tmp_file.name], check=True)
+
 
 def country_sets(reload=False):
     '''Create country sets'''
