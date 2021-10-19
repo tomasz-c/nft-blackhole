@@ -34,7 +34,8 @@ Script / daemon to blocking IP in nftables by country and black lists.
 - blacklist url addresses,
 - block oututput connections to blacklisted IPs,
 - list of countries,
-- policy for countries (accept, block)
+- policy for countries (accept, block),
+- ports excluded from country blocks
 
 ## Installation
 ### Arch Linux Users
