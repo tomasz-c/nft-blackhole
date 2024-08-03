@@ -47,6 +47,7 @@ SET_TEMPLATE = ('table inet blackhole {\n\tset ${set_name} {\n\t\ttype ${ip_ver}
                 '\t\tflags interval\n\t\tauto-merge\n\t\telements = { ${ip_list} }\n\t}\n}').expandtabs()
 
 FORWARD_TEMPLATE = ('\tchain forward {\n\t\ttype filter hook forward priority -1; policy accept;\n'
+                   '\t\tct state established,related accept\n'
                    '\t\tip saddr @whitelist-v4 counter accept\n'
                    '\t\tip6 saddr @whitelist-v6 counter accept\n'
                    '\t\tip saddr @blacklist-v4 counter ${block_policy}\n'
