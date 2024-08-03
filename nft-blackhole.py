@@ -51,7 +51,11 @@ FORWARD_TEMPLATE = ('\tchain forward {\n\t\ttype filter hook forward priority -1
                    '\t\tip saddr @whitelist-v4 counter accept\n'
                    '\t\tip6 saddr @whitelist-v6 counter accept\n'
                    '\t\tip saddr @blacklist-v4 counter ${block_policy}\n'
-                   '\t\tip6 saddr @blacklist-v6 counter ${block_policy}\n\t}').expandtabs() 
+                   '\t\tip6 saddr @blacklist-v6 counter ${block_policy}\n'
+                   '\t\t${country_ex_ports_rule}'
+                   '\t\tip saddr @country-v4 counter ${country_policy}\n'
+                   '\t\tip6 saddr @contry-v6 counter ${country_policy}\n'
+                   '\t\tcounter\t}').expandtabs() 
 
 OUTPUT_TEMPLATE = ('\tchain output {\n\t\ttype filter hook output priority -1; policy accept;\n'
                    '\t\tip daddr @whitelist-v4 counter accept\n'
@@ -91,7 +95,9 @@ else:
     chain_output = ''
 
 if BLOCK_FORWARD:
-    chain_forward = Template(FORWARD_TEMPLATE).substitute(block_policy=block_policy)
+    chain_forward = Template(FORWARD_TEMPLATE).substitute(block_policy=block_policy,
+                                                          country_policy=country_policy,
+                                                          country_ex_ports_rule=country_ex_ports_rule)
 else:
     chain_forward = ''
 
