@@ -54,8 +54,8 @@ FORWARD_TEMPLATE = ('\tchain forward {\n\t\ttype filter hook forward priority -1
                    '\t\tip6 saddr @blacklist-v6 counter ${block_policy}\n'
                    '\t\t${country_ex_ports_rule}'
                    '\t\tip saddr @country-v4 counter ${country_policy}\n'
-                   '\t\tip6 saddr @contry-v6 counter ${country_policy}\n'
-                   '\t\tcounter\t}').expandtabs() 
+                   '\t\tip6 saddr @country-v6 counter ${country_policy}\n'
+                   '\t\tcounter\n\t}').expandtabs() 
 
 OUTPUT_TEMPLATE = ('\tchain output {\n\t\ttype filter hook output priority -1; policy accept;\n'
                    '\t\tip daddr @whitelist-v4 counter accept\n'
