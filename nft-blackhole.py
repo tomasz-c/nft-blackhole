@@ -31,6 +31,7 @@ WHITELIST = config['WHITELIST']
 BLACKLIST = config['BLACKLIST']
 COUNTRY_LIST = config['COUNTRY_LIST']
 BLOCK_OUTPUT = config['BLOCK_OUTPUT']
+BLOCK_FORWARD = config['BLOCK_FORWARD']
 
 
 # Correct incorrect YAML parsing of NO (Norway)
@@ -41,6 +42,17 @@ while False in COUNTRY_LIST:
 
 SET_TEMPLATE = ('table inet blackhole {\n\tset ${set_name} {\n\t\ttype ${ip_ver}_addr\n'
                 '\t\tflags interval\n\t\tauto-merge\n\t\telements = { ${ip_list} }\n\t}\n}').expandtabs()
+
+FORWARD_TEMPLATE = ('\tchain forward {\n\t\ttype filter hook forward priority -1; policy accept;\n'
+                   '\t\tct state established,related accept\n'
+                   '\t\tip saddr @whitelist-v4 counter accept\n'
+                   '\t\tip6 saddr @whitelist-v6 counter accept\n'
+                   '\t\tip saddr @blacklist-v4 counter ${block_policy}\n'
+                   '\t\tip6 saddr @blacklist-v6 counter ${block_policy}\n'
+                   '\t\t${country_ex_ports_rule}'
+                   '\t\tip saddr @country-v4 counter ${country_policy}\n'
+                   '\t\tip6 saddr @country-v6 counter ${country_policy}\n'
+                   '\t\tcounter\n\t}').expandtabs() 
 
 OUTPUT_TEMPLATE = ('\tchain output {\n\t\ttype filter hook output priority -1; policy accept;\n'
                    '\t\tip daddr @whitelist-v4 counter accept\n'
@@ -79,6 +91,13 @@ if BLOCK_OUTPUT:
 else:
     chain_output = ''
 
+if BLOCK_FORWARD:
+    chain_forward = Template(FORWARD_TEMPLATE).substitute(block_policy=block_policy,
+                                                          country_policy=country_policy,
+                                                          country_ex_ports_rule=country_ex_ports_rule)
+else:
+    chain_forward = ''
+
 # Setting urllib
 ctx = ssl.create_default_context()
 IGNORE_CERTIFICATE = False
@@ -106,7 +125,8 @@ def start():
                                                  block_policy=block_policy,
                                                  country_ex_ports_rule=country_ex_ports_rule,
                                                  country_policy=country_policy,
-                                                 chain_output=chain_output)
+                                                 chain_output=chain_output,
+                                                 chain_forward=chain_forward)
 
     run(['nft', '-f', '-'], input=nft_conf.encode(), check=True)
 

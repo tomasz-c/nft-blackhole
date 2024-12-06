@@ -50,4 +50,6 @@ table inet blackhole {
         }
 
         ${chain_output}
+
+        ${chain_forward}
 }
