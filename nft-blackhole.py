@@ -46,7 +46,7 @@ while False in COUNTRY_LIST:
 SET_TEMPLATE = ('table inet blackhole {\n\tset ${set_name} {\n\t\ttype ${ip_ver}_addr\n'
                 '\t\tflags interval\n\t\tauto-merge\n\t\telements = { ${ip_list} }\n\t}\n}').expandtabs()
 
-FORWARD_TEMPLATE = ('\tchain forward {\n\t\ttype filter hook forward priority -1; policy accept;\n'
+FORWARD_TEMPLATE = ('\tchain forward {\n\t\ttype filter hook forward priority -1; policy ${default_policy};\n'
                    '\t\tct state established,related accept\n'
                    '\t\tip saddr @whitelist-v4 counter accept\n'
                    '\t\tip6 saddr @whitelist-v6 counter accept\n'
@@ -95,7 +95,8 @@ else:
     chain_output = ''
 
 if BLOCK_FORWARD:
-    chain_forward = Template(FORWARD_TEMPLATE).substitute(block_policy=block_policy,
+    chain_forward = Template(FORWARD_TEMPLATE).substitute(default_policy=default_policy,
+                                                          block_policy=block_policy,
                                                           country_policy=country_policy,
                                                           country_ex_ports_rule=country_ex_ports_rule)
 else:
