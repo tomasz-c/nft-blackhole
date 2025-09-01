@@ -5,4 +5,4 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/nft-blackhole.py reload
+ExecStart=/usr/local/sbin/nft-blackhole.py reload

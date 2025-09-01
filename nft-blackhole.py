@@ -16,7 +16,7 @@ from subprocess import run
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from yaml import safe_load
 
-desc = 'Script to blocking IP in nftables by country and black lists'
+desc = 'Daemon blocking IP addresses upon country or blacklist, using nftables'
 parser = argparse.ArgumentParser(description=desc)
 parser.add_argument('action', choices=('start', 'stop', 'restart', 'reload'),
                     help='Action to nft-blackhole')
@@ -109,8 +109,8 @@ if IGNORE_CERTIFICATE:
 https_handler = urllib.request.HTTPSHandler(context=ctx)
 
 opener = urllib.request.build_opener(https_handler)
-# opener.addheaders = [('User-agent', 'Mozilla/5.0 (X11; Linux x86_64)')]
-opener.addheaders = [('User-agent', 'Mozilla/5.0 (compatible; nft-blackhole/0.1.0; '
+# opener.addheaders = [('User-agent', f"Mozilla/5.0 (compatible; nft-blackhole/{__version__};")]
+opener.addheaders = [('User-agent', f"Mozilla/5.0 (compatible; nft-blackhole/{__version__}; "
                       '+https://github.com/tomasz-c/nft-blackhole)')]
 urllib.request.install_opener(opener)
 

@@ -1,12 +1,12 @@
 # nft-blackhole
-Script / daemon to blocking IP in nftables by country and black lists.
+Daemon blocking IP addresses upon country or blacklist, using nftables
 
 ## Table of contents
 
 - [Overview](#overview)
 - [Installation](#installation)
-  - [Arch Linux Users](#arch-linux-users)
-  - [Debian Linux Users](#debian-linux-users)
+  - [Arch Linux](#arch-linux)
+  - [Debian Linux](#debian-linux)
   - [Manual](#manual)
 - [Configuration](#configuration)
     - [Set the configuration in a file](#set-the-configuration-in-a-file)
@@ -23,29 +23,29 @@ Script / daemon to blocking IP in nftables by country and black lists.
 
 ##### Features
 - download publicly available blacklists and block IPs from them,
-- block or whitelist individual countries,
-- whitelist individual networks or IP addresses,
+- block or whitelist countries,
+- whitelist network or IP address,
 
 ##### Configuration file
 ###### In the configuration file you can define:
-- IP versions supported (ipv4, ipv6),
+- IP versions supported (IPv4, IPv6),
 - blocking policy (reject, drop,)
-- network or IP addresses for the white list,
-- blacklist url addresses,
-- block oututput connections to blacklisted IPs,
+- white list (network or IP addresses),
+- blacklist URL,
+- block output connections to blacklisted IPs,
 - list of countries,
 - policy for countries (accept, block),
 - ports excluded from country blocks
 
 ## Installation
-### Arch Linux Users
+### Arch Linux
 ##### Install from AUR package `nft-blackhole`
 For example:
 
     yay -S nft-blackhole
     pikaur -S nft-blackhole
 
-### Debian Linux Users
+### Debian Linux
 Tested with Debian buster 10
 
 ##### Download the debian-10 branch of this repository
@@ -57,14 +57,14 @@ Tested with Debian buster 10
     sudo apt install nftables python3-yaml
 
 ##### Install files
-
-    sudo cp nft-blackhole.conf /etc/
-    sudo cp nft-blackhole.py   /usr/bin/
+    sudo cp -i nft-blackhole.conf /etc/
+    sudo cp -i nft-blackhole.py   /usr/local/sbin/
     sudo mkdir /usr/share/nft-blackhole
-    sudo cp nft-blackhole.template /usr/share/nft-blackhole/
-    sudo cp nft-blackhole.service        /lib/systemd/system/
-    sudo cp nft-blackhole-reload.service /lib/systemd/system/
-    sudo cp nft-blackhole-reload.timer   /lib/systemd/system/
+    sudo cp -i nft-blackhole.template /usr/share/nft-blackhole/
+    sudo cp -i nft-blackhole.service        /lib/systemd/system/
+    sudo cp -i nft-blackhole-reload.service /lib/systemd/system/
+    sudo cp -i nft-blackhole-reload.timer   /lib/systemd/system/
+    [[ -f /usr/bin/nft-blackhole.py ]] && echo "BEWARE, another version is already installed"
 
 ### Manual
 ##### Requirements
@@ -74,7 +74,7 @@ Tested with Debian buster 10
 - systemd (for daemon)
 
 ##### File location
-    /usr/bin/nft-blackhole.py
+    /usr/local/sbin/nft-blackhole.py
     /usr/share/nft-blackhole/nft-blackhole.template
     /etc/nft-blackhole.conf
     /usr/lib/systemd/system/nft-blackhole.service
@@ -88,10 +88,10 @@ Tested with Debian buster 10
 ## Usage
 ### Manual
 ##### As root:
-	/usr/bin/nft-blackhole.py start
-	/usr/bin/nft-blackhole.py reload
-	/usr/bin/nft-blackhole.py restart
-	/usr/bin/nft-blackhole.py stop
+	/usr/local/sbin/nft-blackhole.py start
+	/usr/local/sbin/nft-blackhole.py reload
+	/usr/local/sbin/nft-blackhole.py restart
+	/usr/local/sbin/nft-blackhole.py stop
 
 ### With systemd
 ##### As root:
@@ -100,14 +100,17 @@ Tested with Debian buster 10
 	systemctl reload nft-blackhole.service
 	systemctl restart nft-blackhole.service
 
-### List counter packages dropped/accept
+### List packets counters
     nft list chain inet blackhole input
 ### List table and sets for blackhole
     nft list table inet blackhole
 ### Refresh lists
+
+nft-blackhole can download new versions of any blacklist it uses.  You can trigger this manually, however it is better to have it automatically and periodically done (either thanks to a cron job or to a Systemd timer).
+
 #### Manual
 
-    /usr/bin/nft-blackhole.py reload
+    /usr/local/sbin/nft-blackhole.py reload
     systemctl reload nft-blackhole.service
 
 #### Crontab
