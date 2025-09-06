@@ -6,10 +6,10 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=/usr/bin/nft-blackhole.py start
-ExecStop=/usr/bin/nft-blackhole.py stop
+ExecStart=/usr/local/sbin/nft-blackhole.py start
+ExecStop=/usr/local/sbin/nft-blackhole.py stop
 
-ExecReload=/usr/bin/nft-blackhole.py reload
+ExecReload=/usr/local/sbin/nft-blackhole.py reload
 
 User=root
 
