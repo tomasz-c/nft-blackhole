@@ -1,0 +1,9 @@
+[Unit]
+Description=Update nft-blackhole lists
+
+[Timer]
+OnBootSec=6h
+OnUnitActiveSec=6h
+
+[Install]
+WantedBy=timers.target
