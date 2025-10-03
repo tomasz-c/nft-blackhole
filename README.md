@@ -29,6 +29,8 @@ Daemon blocking IP addresses upon country or blacklist, using nftables
 - download publicly available blacklists and block IPs from them
 - block or whitelist countries
 - whitelist network or IP address
+- automatic retry on failed downloads (3 attempts with 5s delay)
+- atomic operations - prevent loading incomplete rulesets on failures
 
 ##### Configuration file
 ###### In the configuration file you can define:

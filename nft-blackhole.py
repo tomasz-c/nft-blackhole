@@ -4,10 +4,10 @@
 
 __author__ = "Tomasz Cebula <tomasz.cebula@gmail.com>"
 __license__ = "MIT"
-__version__ = "1.1.0"
+__version__ = "1.3.0"
 
 import argparse
-from sys import stderr
+from sys import stderr, exit
 from string import Template
 import re
 import urllib.request
@@ -15,6 +15,7 @@ import ssl
 from subprocess import run
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from yaml import safe_load
+import time
 
 desc = 'Daemon blocking IP addresses upon country or blacklist, using nftables'
 parser = argparse.ArgumentParser(description=desc)
@@ -44,15 +45,15 @@ SET_TEMPLATE = ('table inet blackhole {\n\tset ${set_name} {\n\t\ttype ${ip_ver}
                 '\t\tflags interval\n\t\tauto-merge\n\t\telements = { ${ip_list} }\n\t}\n}').expandtabs()
 
 FORWARD_TEMPLATE = ('\tchain forward {\n\t\ttype filter hook forward priority -1; policy ${default_policy};\n'
-                   '\t\tct state established,related accept\n'
-                   '\t\tip saddr @whitelist-v4 counter accept\n'
-                   '\t\tip6 saddr @whitelist-v6 counter accept\n'
-                   '\t\tip saddr @blacklist-v4 counter ${block_policy}\n'
-                   '\t\tip6 saddr @blacklist-v6 counter ${block_policy}\n'
-                   '\t\t${country_ex_ports_rule}\n'
-                   '\t\tip saddr @country-v4 counter ${country_policy}\n'
-                   '\t\tip6 saddr @country-v6 counter ${country_policy}\n'
-                   '\t\tcounter\n\t}').expandtabs()
+                    '\t\tct state established,related accept\n'
+                    '\t\tip saddr @whitelist-v4 counter accept\n'
+                    '\t\tip6 saddr @whitelist-v6 counter accept\n'
+                    '\t\tip saddr @blacklist-v4 counter ${block_policy}\n'
+                    '\t\tip6 saddr @blacklist-v6 counter ${block_policy}\n'
+                    '\t\t${country_ex_ports_rule}\n'
+                    '\t\tip saddr @country-v4 counter ${country_policy}\n'
+                    '\t\tip6 saddr @country-v6 counter ${country_policy}\n'
+                    '\t\tcounter\n\t}').expandtabs()
 
 OUTPUT_TEMPLATE = ('\tchain output {\n\t\ttype filter hook output priority -1; policy accept;\n'
                    '\t\tip daddr @whitelist-v4 counter accept\n'
@@ -131,26 +132,35 @@ def start():
 
     run(['nft', '-f', '-'], input=nft_conf.encode(), check=True)
 
-
-def get_urls(urls, do_filter=False):
-    '''Download url in threads'''
+def get_urls(urls, do_filter=False, max_retries=3, retry_delay=5):
+    '''Download url in threads with retry logic'''
     ip_list_aggregated = []
     def get_url(url):
-        try:
-            response = urllib.request.urlopen(url, timeout=10)
-            content = response.read().decode('utf-8')
-        except BaseException as exc:
-            print('ERROR', getattr(exc, 'message', repr(exc)), url, file=stderr)
-            ip_list = []
-        else:
-            if do_filter:
-                content = re.sub(r'^ *(#.*\n?|\n?)', '', content, flags=re.MULTILINE)
-            ip_list = content.splitlines()
-        return ip_list
+        for attempt in range(max_retries):
+            try:
+                response = urllib.request.urlopen(url, timeout=10)
+                content = response.read().decode('utf-8')
+            except BaseException as exc:
+                if attempt < max_retries - 1:
+                    print(f'WARNING: Failed to fetch {url} on attempt {attempt+1}/{max_retries}. Retrying in {retry_delay}s. Error: {exc}', file=stderr)
+                    time.sleep(retry_delay)
+                    continue
+                else:
+                    print(f'ERROR: Failed to fetch {url} after {max_retries} attempts. Giving up. Final error: {exc}', file=stderr)
+                    return None
+            else:
+                if do_filter:
+                    content = re.sub(r'^ *(#.*\n?|\n?)', '', content, flags=re.MULTILINE)
+                ip_list = content.splitlines()
+                return ip_list
+        return None
+
     with ThreadPoolExecutor(max_workers=8) as executor:
         do_urls = [executor.submit(get_url, url) for url in urls]
         for out in as_completed(do_urls):
             ip_list = out.result()
+            if ip_list is None:
+                return None
             ip_list_aggregated += ip_list
     return ip_list_aggregated
 
@@ -179,9 +189,9 @@ def get_country_ip_list2(ip_ver):
     urls = []
     for country in COUNTRY_LIST:
         if ip_ver == 'v4':
-            url = f'http://ipdeny.com/ipblocks/data/aggregated/{country.lower()}-aggregated.zone'
+            url = f'https://www.ipdeny.com/ipblocks/data/aggregated/{country.lower()}-aggregated.zone'
         elif ip_ver == 'v6':
-            url = f'http://ipdeny.com/ipv6/ipaddresses/aggregated/{country.lower()}-aggregated.zone'
+            url = f'https://www.ipdeny.com/ipv6/ipaddresses/aggregated/{country.lower()}-aggregated.zone'
         urls.append(url)
     ips = get_urls(urls)
     return ips
@@ -199,11 +209,11 @@ def whitelist_sets(reload=False):
             run(['nft', '-f', '-'], input=nft_set.encode(), check=True)
 
 
-def blacklist_sets(reload=False):
+def blacklist_sets(ip_data, reload=False):
     '''Create blacklist sets'''
     for ip_ver in IP_VER:
         set_name = f'blacklist-{ip_ver}'
-        ip_list = get_blacklist(ip_ver)
+        ip_list = ip_data['blacklist'][ip_ver]
         set_list = ', '.join(ip_list)
         nft_set = (Template(SET_TEMPLATE).substitute(ip_ver=f'ip{ip_ver}', set_name=set_name, ip_list=set_list))
         if reload:
@@ -212,11 +222,11 @@ def blacklist_sets(reload=False):
             run(['nft', '-f', '-'], input=nft_set.encode(), check=True)
 
 
-def country_sets(reload=False):
+def country_sets(ip_data, reload=False):
     '''Create country sets'''
     for ip_ver in IP_VER:
         set_name = f'country-{ip_ver}'
-        ip_list = get_country_ip_list(ip_ver)
+        ip_list = ip_data['country'][ip_ver]
         set_list = ', '.join(ip_list)
         nft_set = (Template(SET_TEMPLATE).substitute(ip_ver=f'ip{ip_ver}', set_name=set_name, ip_list=set_list))
         if reload:
@@ -225,21 +235,51 @@ def country_sets(reload=False):
             run(['nft', '-f', '-'], input=nft_set.encode(), check=True)
 
 
+def fetch_all_lists():
+    '''Fetch all blacklist and country lists with validation'''
+    ip_data = {'blacklist': {}, 'country': {}}
+
+    for ip_ver in IP_VER:
+        blacklist_ips = get_blacklist(ip_ver)
+        if blacklist_ips is None:
+            return None
+        ip_data['blacklist'][ip_ver] = blacklist_ips
+
+        country_ips = get_country_ip_list2(ip_ver)
+        if country_ips is None:
+            return None
+        ip_data['country'][ip_ver] = country_ips
+
+    return ip_data
+
 # Main
 if action == 'start':
+    ip_data = fetch_all_lists()
+    if ip_data is None:
+        print('ERROR: Failed to fetch lists, aborting start', file=stderr)
+        exit(1)
     start()
     whitelist_sets()
-    blacklist_sets()
-    country_sets()
+    blacklist_sets(ip_data)
+    country_sets(ip_data)
 elif action == 'stop':
     stop()
 elif action == 'restart':
+    ip_data = fetch_all_lists()
+    if ip_data is None:
+        print('ERROR: Failed to fetch lists, cleaning up and aborting restart', file=stderr)
+        stop()
+        exit(1)
     stop()
     start()
     whitelist_sets()
-    blacklist_sets()
-    country_sets()
+    blacklist_sets(ip_data)
+    country_sets(ip_data)
 elif action == 'reload':
+    ip_data = fetch_all_lists()
+    if ip_data is None:
+        print('ERROR: Failed to fetch lists, skipping reload', file=stderr)
+        exit(1)
     whitelist_sets(reload=True)
-    blacklist_sets(reload=True)
-    country_sets(reload=True)
+    blacklist_sets(ip_data, reload=True)
+    country_sets(ip_data, reload=True)
