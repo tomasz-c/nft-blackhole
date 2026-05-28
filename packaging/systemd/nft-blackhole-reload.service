@@ -1,6 +1,7 @@
 [Unit]
 Description=Reload nft-blackhole service
-After=network-online.target
+Requires=nft-blackhole.service
+After=nft-blackhole.service network-online.target
 Wants=network-online.target
 
 [Service]

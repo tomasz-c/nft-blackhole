@@ -12,7 +12,7 @@ from string import Template
 import re
 import urllib.request
 import ssl
-from subprocess import run
+from subprocess import run, DEVNULL
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from yaml import safe_load
 import time
@@ -285,6 +285,10 @@ elif action == 'reload':
     if ip_data is None:
         print('ERROR: Failed to fetch lists, skipping reload', file=stderr)
         exit(1)
+    result = run(['nft', 'list', 'chain', 'inet', 'blackhole', 'input'],
+                 stdout=DEVNULL, stderr=DEVNULL, check=False)
+    if result.returncode != 0:
+        start()
     whitelist_sets(reload=True)
     blacklist_sets(ip_data, reload=True)
     country_sets(ip_data, reload=True)
