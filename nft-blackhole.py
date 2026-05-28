@@ -4,7 +4,7 @@
 
 __author__ = "Tomasz Cebula <tomasz.cebula@gmail.com>"
 __license__ = "MIT"
-__version__ = "1.3.0"
+__version__ = "1.4.0"
 
 import argparse
 from sys import stderr, exit
@@ -33,6 +33,7 @@ BLACKLIST = config['BLACKLIST']
 COUNTRY_LIST = config['COUNTRY_LIST']
 BLOCK_OUTPUT = config['BLOCK_OUTPUT']
 BLOCK_FORWARD = config['BLOCK_FORWARD']
+COUNTRY_LIST_SOURCE = config.get('COUNTRY_LIST_SOURCE', 'ipverse')
 
 
 # Correct incorrect YAML parsing of NO (Norway)
@@ -150,7 +151,7 @@ def get_urls(urls, do_filter=False, max_retries=3, retry_delay=5):
                     return None
             else:
                 if do_filter:
-                    content = re.sub(r'^ *(#.*\n?|\n?)', '', content, flags=re.MULTILINE)
+                    content = re.sub(r'^\s*(?:#.*)?\n', '', content, flags=re.MULTILINE)
                 ip_list = content.splitlines()
                 return ip_list
         return None
@@ -174,17 +175,17 @@ def get_blacklist(ip_ver):
     return ips
 
 
-def get_country_ip_list(ip_ver):
-    '''Get country lists from GitHub @herrbischoff'''
+def get_country_ip_list_ipverse(ip_ver):
+    '''Get country lists from GitHub @ipverse'''
     urls = []
     for country in COUNTRY_LIST:
-        url = f'https://raw.githubusercontent.com/herrbischoff/country-ip-blocks/master/ip{ip_ver}/{country.lower()}.cidr'
+        url = f'https://raw.githubusercontent.com/ipverse/geo-ip-blocks/refs/heads/master/country/{country.lower()}/{country.lower()}-ip{ip_ver}.txt'
         urls.append(url)
-    ips = get_urls(urls)
+    ips = get_urls(urls, do_filter=True)
     return ips
 
 
-def get_country_ip_list2(ip_ver):
+def get_country_ip_list_ipdeny(ip_ver):
     '''Get country lists from ipdeny.com'''
     urls = []
     for country in COUNTRY_LIST:
@@ -245,7 +246,11 @@ def fetch_all_lists():
             return None
         ip_data['blacklist'][ip_ver] = blacklist_ips
 
-        country_ips = get_country_ip_list2(ip_ver)
+        if COUNTRY_LIST_SOURCE == 'ipdeny':
+            country_ips = get_country_ip_list_ipdeny(ip_ver)
+        else:
+            country_ips = get_country_ip_list_ipverse(ip_ver)
+
         if country_ips is None:
             return None
         ip_data['country'][ip_ver] = country_ips

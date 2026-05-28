@@ -39,6 +39,7 @@ Daemon blocking IP addresses upon country or blacklist, using nftables
 - white list (network or IP addresses)
 - blacklist URL
 - block output connections to blacklisted IPs
+- country IP list source (ipverse, ipdeny)
 - list of countries
 - policy for countries (accept, block)
 - ports excluded from country blocks
@@ -141,9 +142,11 @@ systemctl list-timers --all
 ```
 
 ## Credits
-[country-ip-blocks](https://github.com/herrbischoff/country-ip-blocks) - CIDR country-level IP lists
+[ipverse/geo-ip-blocks](https://github.com/ipverse/geo-ip-blocks) - Daily-updated IPv4 and IPv6 prefixes by country, derived from network registration data.
 
-[https://iplists.firehol.org/](https://iplists.firehol.org/) - aggregated, publicly available blacklists
+[IPdeny](https://www.ipdeny.com/ipblocks/) - A free public service providing downloadable country-specific IP address zone files in CIDR format.
+
+[FireHOL IP Lists](https://iplists.firehol.org/) - A public repository that aggregates, analyzes, and compares security blocklists and cybercrime IP feeds.
 
 ## License
 Code released under [MIT](./LICENSE) license.
