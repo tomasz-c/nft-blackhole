@@ -144,6 +144,8 @@ systemctl list-timers --all
 ## Credits
 [ipverse/geo-ip-blocks](https://github.com/ipverse/geo-ip-blocks) - Daily-updated IPv4 and IPv6 prefixes by country, derived from network registration data.
 
+[ebrasha/cidr-ip-ranges-by-country](https://github.com/ebrasha/cidr-ip-ranges-by-country) - Hourly-updated IPv4 and IPv6 CIDR ranges by country, designed for geolocation, firewall rules, and cybersecurity filtering.
+
 [IPdeny](https://www.ipdeny.com/ipblocks/) - A free public service providing downloadable country-specific IP address zone files in CIDR format.
 
 [FireHOL IP Lists](https://iplists.firehol.org/) - A public repository that aggregates, analyzes, and compares security blocklists and cybercrime IP feeds.

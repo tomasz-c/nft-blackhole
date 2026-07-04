@@ -185,6 +185,16 @@ def get_country_ip_list_ipverse(ip_ver):
     return ips
 
 
+def get_country_ip_list_ebrasha(ip_ver):
+    '''Get country lists from GitHub @ipverse'''
+    urls = []
+    for country in COUNTRY_LIST:
+        url = f'https://raw.githubusercontent.com/ebrasha/cidr-ip-ranges-by-country/refs/heads/master/CIDR/{country.upper()}-ip{ip_ver}-Hackers.Zone.txt'
+        urls.append(url)
+    ips = get_urls(urls, do_filter=True)
+    return ips
+
+
 def get_country_ip_list_ipdeny(ip_ver):
     '''Get country lists from ipdeny.com'''
     urls = []
@@ -246,7 +256,9 @@ def fetch_all_lists():
             return None
         ip_data['blacklist'][ip_ver] = blacklist_ips
 
-        if COUNTRY_LIST_SOURCE == 'ipdeny':
+        if COUNTRY_LIST_SOURCE == 'ebrasha':
+            country_ips = get_country_ip_list_ebrasha(ip_ver)
+        elif COUNTRY_LIST_SOURCE == 'ipdeny':
             country_ips = get_country_ip_list_ipdeny(ip_ver)
         else:
             country_ips = get_country_ip_list_ipverse(ip_ver)
