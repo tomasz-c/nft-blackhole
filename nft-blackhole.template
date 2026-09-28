@@ -36,7 +36,7 @@ table inet blackhole {
         }
 
         chain input {
-                type filter hook input priority -1; policy ${default_policy};
+                type filter hook input priority ${priority}; policy ${default_policy};
                 iifname lo accept
                 ct state established,related accept
                 ip saddr @whitelist-v4 counter accept

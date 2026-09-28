@@ -34,6 +34,7 @@ COUNTRY_LIST = config['COUNTRY_LIST']
 BLOCK_OUTPUT = config['BLOCK_OUTPUT']
 BLOCK_FORWARD = config['BLOCK_FORWARD']
 COUNTRY_LIST_SOURCE = config.get('COUNTRY_LIST_SOURCE', 'ipverse')
+PRIORITY = config.get('PRIORITY', -1)
 
 
 # Correct incorrect YAML parsing of NO (Norway)
@@ -45,7 +46,7 @@ while False in COUNTRY_LIST:
 SET_TEMPLATE = ('table inet blackhole {\n\tset ${set_name} {\n\t\ttype ${ip_ver}_addr\n'
                 '\t\tflags interval\n\t\tauto-merge\n\t\telements = { ${ip_list} }\n\t}\n}').expandtabs()
 
-FORWARD_TEMPLATE = ('\tchain forward {\n\t\ttype filter hook forward priority -1; policy ${default_policy};\n'
+FORWARD_TEMPLATE = ('\tchain forward {\n\t\ttype filter hook forward priority ${priority}; policy ${default_policy};\n'
                     '\t\tct state established,related accept\n'
                     '\t\tip saddr @whitelist-v4 counter accept\n'
                     '\t\tip6 saddr @whitelist-v6 counter accept\n'
@@ -56,7 +57,7 @@ FORWARD_TEMPLATE = ('\tchain forward {\n\t\ttype filter hook forward priority -1
                     '\t\tip6 saddr @country-v6 counter ${country_policy}\n'
                     '\t\tcounter\n\t}').expandtabs()
 
-OUTPUT_TEMPLATE = ('\tchain output {\n\t\ttype filter hook output priority -1; policy accept;\n'
+OUTPUT_TEMPLATE = ('\tchain output {\n\t\ttype filter hook output priority ${priority}; policy accept;\n'
                    '\t\tip daddr @whitelist-v4 counter accept\n'
                    '\t\tip6 daddr @whitelist-v6 counter accept\n'
                    '\t\tip daddr @blacklist-v4 counter ${block_policy}\n'
@@ -89,12 +90,14 @@ else:
     country_ex_ports_rule = ''
 
 if BLOCK_OUTPUT:
-    chain_output = Template(OUTPUT_TEMPLATE).substitute(block_policy=block_policy)
+    chain_output = Template(OUTPUT_TEMPLATE).substitute(priority=PRIORITY,
+                                                        block_policy=block_policy)
 else:
     chain_output = ''
 
 if BLOCK_FORWARD:
-    chain_forward = Template(FORWARD_TEMPLATE).substitute(default_policy=default_policy,
+    chain_forward = Template(FORWARD_TEMPLATE).substitute(priority=PRIORITY,
+                                                          default_policy=default_policy,
                                                           block_policy=block_policy,
                                                           country_policy=country_policy,
                                                           country_ex_ports_rule=country_ex_ports_rule)
@@ -124,7 +127,8 @@ def stop():
 def start():
     '''Starting nft-blackhole'''
     nft_template = open('/usr/share/nft-blackhole/nft-blackhole.template').read()
-    nft_conf = Template(nft_template).substitute(default_policy=default_policy,
+    nft_conf = Template(nft_template).substitute(priority=PRIORITY,
+                                                 default_policy=default_policy,
                                                  block_policy=block_policy,
                                                  country_ex_ports_rule=country_ex_ports_rule,
                                                  country_policy=country_policy,

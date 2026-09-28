@@ -39,7 +39,8 @@ Daemon blocking IP addresses upon country or blacklist, using nftables
 - white list (network or IP addresses)
 - blacklist URL
 - block output connections to blacklisted IPs
-- country IP list source (ipverse, ipdeny)
+- nftables chain priority (e.g. -1, 0, or standard priority names)
+- country IP list source (ipverse, ebrasha, ipdeny)
 - list of countries
 - policy for countries (accept, block)
 - ports excluded from country blocks
