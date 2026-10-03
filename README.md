@@ -28,7 +28,7 @@ Daemon blocking IP addresses upon country or blacklist, using nftables
 ##### Features
 - download publicly available blacklists and block IPs from them
 - block or whitelist countries
-- whitelist network or IP address
+- whitelist or blacklist from static entries, local files, or remote URLs (IPv4, IPv6, mixed)
 - automatic retry on failed downloads (3 attempts with 5s delay)
 - atomic operations - prevent loading incomplete rulesets on failures
 
@@ -36,8 +36,8 @@ Daemon blocking IP addresses upon country or blacklist, using nftables
 ###### In the configuration file you can define:
 - IP versions supported (IPv4, IPv6)
 - blocking policy (reject, drop)
-- white list (network or IP addresses)
-- blacklist URL
+- white list (static, file, or url sources)
+- blacklist (static, file, or url sources)
 - block output connections to blacklisted IPs
 - nftables chain priority (e.g. -1, 0, or standard priority names)
 - country IP list source (ipverse, ebrasha, ipdeny)

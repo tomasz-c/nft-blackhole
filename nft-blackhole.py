@@ -9,7 +9,6 @@ __version__ = "1.4.0"
 import argparse
 from sys import stderr, exit
 from string import Template
-import re
 import urllib.request
 import ssl
 from subprocess import run, DEVNULL
@@ -24,12 +23,20 @@ parser.add_argument('action', choices=('start', 'stop', 'restart', 'reload'),
 args = parser.parse_args()
 action = args.action
 
+def stop():
+    '''Stopping nft-blackhole'''
+    run(['nft', 'delete', 'table', 'inet', 'blackhole'], check=False)
+
+if action == 'stop':
+    stop()
+    exit(0)
+
 # Get config
 with open('/etc/nft-blackhole.conf') as cnf:
     config = safe_load(cnf)
 
-WHITELIST = config['WHITELIST']
-BLACKLIST = config['BLACKLIST']
+WHITELIST = config.get('WHITELIST', [])
+BLACKLIST = config.get('BLACKLIST', [])
 COUNTRY_LIST = config['COUNTRY_LIST']
 BLOCK_OUTPUT = config['BLOCK_OUTPUT']
 BLOCK_FORWARD = config['BLOCK_FORWARD']
@@ -114,14 +121,9 @@ if IGNORE_CERTIFICATE:
 https_handler = urllib.request.HTTPSHandler(context=ctx)
 
 opener = urllib.request.build_opener(https_handler)
-# opener.addheaders = [('User-agent', f"Mozilla/5.0 (compatible; nft-blackhole/{__version__};")]
 opener.addheaders = [('User-agent', f"Mozilla/5.0 (compatible; nft-blackhole/{__version__}; "
                       '+https://github.com/tomasz-c/nft-blackhole)')]
 urllib.request.install_opener(opener)
-
-def stop():
-    '''Stopping nft-blackhole'''
-    run(['nft', 'delete', 'table', 'inet', 'blackhole'], check=False)
 
 
 def start():
@@ -137,7 +139,7 @@ def start():
 
     run(['nft', '-f', '-'], input=nft_conf.encode(), check=True)
 
-def get_urls(urls, do_filter=False, max_retries=3, retry_delay=5):
+def get_urls(urls, max_retries=3, retry_delay=5):
     '''Download url in threads with retry logic'''
     ip_list_aggregated = []
     def get_url(url):
@@ -154,10 +156,7 @@ def get_urls(urls, do_filter=False, max_retries=3, retry_delay=5):
                     print(f'ERROR: Failed to fetch {url} after {max_retries} attempts. Giving up. Final error: {exc}', file=stderr)
                     return None
             else:
-                if do_filter:
-                    content = re.sub(r'^\s*(?:#.*)?\n', '', content, flags=re.MULTILINE)
-                ip_list = content.splitlines()
-                return ip_list
+                return content.splitlines()
         return None
 
     with ThreadPoolExecutor(max_workers=8) as executor:
@@ -169,109 +168,159 @@ def get_urls(urls, do_filter=False, max_retries=3, retry_delay=5):
             ip_list_aggregated += ip_list
     return ip_list_aggregated
 
+def split_ip_versions(ip_list):
+    '''Split mixed list into deduplicated IPv4 and IPv6 sets'''
+    split_ips = {'v4': set(), 'v6': set()}
+    v4_add = split_ips['v4'].add
+    v6_add = split_ips['v6'].add
 
-def get_blacklist(ip_ver):
-    '''Get blacklists'''
+    for line in ip_list:
+        if '#' in line:
+            line = line.partition('#')[0]
+        parts = line.split()
+        if not parts:
+            continue
+        entry = parts[0]
+        if ':' in entry:
+            v6_add(entry)
+        elif '.' in entry:
+            v4_add(entry)
+
+    return split_ips
+
+
+def load_ip_sources(config_entry):
+    '''Load IP sources: extract direct IPs, read local files, and fetch URLs, splitting into v4 and v6'''
+    if not config_entry:
+        return {'v4': set(), 'v6': set()}
+
+    raw_ips = []
+    file_paths = []
     urls = []
-    for bl_url in BLACKLIST[ip_ver]:
-        urls.append(bl_url)
-    ips = get_urls(urls, do_filter=True)
-    return ips
+
+    def to_list(val):
+        if not val:
+            return []
+        if isinstance(val, list):
+            return val
+        return [val]
+
+    if isinstance(config_entry, dict):
+        if any(k in config_entry for k in ('static', 'file', 'url')):
+            raw_ips.extend(to_list(config_entry.get('static')))
+            file_paths.extend(to_list(config_entry.get('file')))
+            urls.extend(to_list(config_entry.get('url')))
+        else:
+            # BACKWARD COMPATIBILITY: Legacy dictionary format (v4, v6).
+            # Remove this block when migrating fully to static/file/url format.
+            for key in ['v4', 'v6']:
+                for item in to_list(config_entry.get(key)):
+                    item_str = str(item).strip()
+                    if item_str.startswith(('http://', 'https://')):
+                        urls.append(item_str)
+                    else:
+                        raw_ips.append(item_str)
+            # END BACKWARD COMPATIBILITY
+    elif isinstance(config_entry, list):
+        # BACKWARD COMPATIBILITY: Flat list format.
+        # Remove this block when migrating fully to static/file/url format.
+        for item in config_entry:
+            if not item:
+                continue
+            item_str = str(item).strip()
+            if item_str.startswith(('http://', 'https://')):
+                urls.append(item_str)
+            else:
+                raw_ips.append(item_str)
+        # END BACKWARD COMPATIBILITY
+
+    # Read local files
+    for filepath in file_paths:
+        if not filepath:
+            continue
+        filepath = str(filepath).strip()
+        if not filepath or filepath.startswith('#'):
+            continue
+        try:
+            with open(filepath, 'r') as f:
+                raw_ips.extend(f.readlines())
+        except OSError as exc:
+            print(f'ERROR: Failed to read local file {filepath}: {exc}', file=stderr)
+            return None
+
+    # Fetch URLs
+    if urls:
+        clean_urls = []
+        for u in urls:
+            if not u:
+                continue
+            u_str = str(u).strip()
+            if u_str and not u_str.startswith('#'):
+                clean_urls.append(u_str)
+        if clean_urls:
+            unique_urls = list(dict.fromkeys(clean_urls))
+            downloaded = get_urls(unique_urls)
+            if downloaded is None:
+                return None
+            raw_ips.extend(downloaded)
+
+    return split_ip_versions(raw_ips)
 
 
-def get_country_ip_list_ipverse(ip_ver):
-    '''Get country lists from GitHub @ipverse'''
+def get_country_ips():
+    '''Fetch country IP lists based on configured source and return dict per IP version'''
+    if not COUNTRY_LIST:
+        return {'v4': set(), 'v6': set()}
+
     urls = []
-    for country in COUNTRY_LIST:
-        url = f'https://raw.githubusercontent.com/ipverse/geo-ip-blocks/refs/heads/master/country/{country.lower()}/{country.lower()}-ip{ip_ver}.txt'
-        urls.append(url)
-    ips = get_urls(urls, do_filter=True)
-    return ips
-
-
-def get_country_ip_list_ebrasha(ip_ver):
-    '''Get country lists from GitHub @ipverse'''
-    urls = []
-    for country in COUNTRY_LIST:
-        url = f'https://raw.githubusercontent.com/ebrasha/cidr-ip-ranges-by-country/refs/heads/master/CIDR/{country.upper()}-ip{ip_ver}-Hackers.Zone.txt'
-        urls.append(url)
-    ips = get_urls(urls, do_filter=True)
-    return ips
-
-
-def get_country_ip_list_ipdeny(ip_ver):
-    '''Get country lists from ipdeny.com'''
-    urls = []
-    for country in COUNTRY_LIST:
-        if ip_ver == 'v4':
-            url = f'https://www.ipdeny.com/ipblocks/data/aggregated/{country.lower()}-aggregated.zone'
-        elif ip_ver == 'v6':
-            url = f'https://www.ipdeny.com/ipv6/ipaddresses/aggregated/{country.lower()}-aggregated.zone'
-        urls.append(url)
-    ips = get_urls(urls)
-    return ips
-
-
-def whitelist_sets(reload=False):
-    '''Create whitelist sets'''
     for ip_ver in IP_VER:
-        set_name = f'whitelist-{ip_ver}'
-        set_list = ', '.join(WHITELIST[ip_ver])
-        nft_set = (Template(SET_TEMPLATE).substitute(ip_ver=f'ip{ip_ver}', set_name=set_name, ip_list=set_list))
-        if reload:
-            run(['nft', 'flush', 'set', 'inet', 'blackhole', set_name], check=False)
-        if WHITELIST[ip_ver]:
-            run(['nft', '-f', '-'], input=nft_set.encode(), check=True)
+        for country in COUNTRY_LIST:
+            c_lower = country.lower()
+            if COUNTRY_LIST_SOURCE == 'ebrasha':
+                c_upper = country.upper()
+                url = f'https://raw.githubusercontent.com/ebrasha/cidr-ip-ranges-by-country/refs/heads/master/CIDR/{c_upper}-ip{ip_ver}-Hackers.Zone.txt'
+            elif COUNTRY_LIST_SOURCE == 'ipdeny':
+                if ip_ver == 'v4':
+                    url = f'https://www.ipdeny.com/ipblocks/data/aggregated/{c_lower}-aggregated.zone'
+                else:
+                    url = f'https://www.ipdeny.com/ipv6/ipaddresses/aggregated/{c_lower}-aggregated.zone'
+            else:  # ipverse
+                url = f'https://raw.githubusercontent.com/ipverse/geo-ip-blocks/refs/heads/master/country/{c_lower}/{c_lower}-ip{ip_ver}.txt'
+            urls.append(url)
 
+    raw_ips = get_urls(urls)
+    if raw_ips is None:
+        return None
 
-def blacklist_sets(ip_data, reload=False):
-    '''Create blacklist sets'''
-    for ip_ver in IP_VER:
-        set_name = f'blacklist-{ip_ver}'
-        ip_list = ip_data['blacklist'][ip_ver]
-        set_list = ', '.join(ip_list)
-        nft_set = (Template(SET_TEMPLATE).substitute(ip_ver=f'ip{ip_ver}', set_name=set_name, ip_list=set_list))
-        if reload:
-            run(['nft', 'flush', 'set', 'inet', 'blackhole', set_name], check=False)
-        if ip_list:
-            run(['nft', '-f', '-'], input=nft_set.encode(), check=True)
+    return split_ip_versions(raw_ips)
 
-
-def country_sets(ip_data, reload=False):
-    '''Create country sets'''
-    for ip_ver in IP_VER:
-        set_name = f'country-{ip_ver}'
-        ip_list = ip_data['country'][ip_ver]
-        set_list = ', '.join(ip_list)
-        nft_set = (Template(SET_TEMPLATE).substitute(ip_ver=f'ip{ip_ver}', set_name=set_name, ip_list=set_list))
-        if reload:
-            run(['nft', 'flush', 'set', 'inet', 'blackhole', set_name], check=False)
-        if ip_list:
-            run(['nft', '-f', '-'], input=nft_set.encode(), check=True)
-
+def apply_nft_sets(ip_data, reload=False):
+    '''Create all nftables sets (whitelist, blacklist, country)'''
+    for set_type in ('whitelist', 'blacklist', 'country'):
+        for ip_ver in IP_VER:
+            set_name = f'{set_type}-{ip_ver}'
+            ip_list = ip_data[set_type][ip_ver]
+            set_list = ', '.join(ip_list)
+            nft_set = (Template(SET_TEMPLATE).substitute(ip_ver=f'ip{ip_ver}', set_name=set_name, ip_list=set_list))
+            if reload:
+                run(['nft', 'flush', 'set', 'inet', 'blackhole', set_name], check=False)
+            if ip_list:
+                run(['nft', '-f', '-'], input=nft_set.encode(), check=True)
 
 def fetch_all_lists():
-    '''Fetch all blacklist and country lists with validation'''
-    ip_data = {'blacklist': {}, 'country': {}}
+    '''Fetch all whitelist, blacklist and country lists with validation'''
+    whitelist_ips = load_ip_sources(WHITELIST)
+    if whitelist_ips is None:
+        return None
 
-    for ip_ver in IP_VER:
-        blacklist_ips = get_blacklist(ip_ver)
-        if blacklist_ips is None:
-            return None
-        ip_data['blacklist'][ip_ver] = blacklist_ips
+    blacklist_ips = load_ip_sources(BLACKLIST)
+    if blacklist_ips is None:
+        return None
 
-        if COUNTRY_LIST_SOURCE == 'ebrasha':
-            country_ips = get_country_ip_list_ebrasha(ip_ver)
-        elif COUNTRY_LIST_SOURCE == 'ipdeny':
-            country_ips = get_country_ip_list_ipdeny(ip_ver)
-        else:
-            country_ips = get_country_ip_list_ipverse(ip_ver)
-
-        if country_ips is None:
-            return None
-        ip_data['country'][ip_ver] = country_ips
-
-    return ip_data
+    country_ips = get_country_ips()
+    if country_ips is None:
+        return None
+    return {'whitelist': whitelist_ips, 'blacklist': blacklist_ips, 'country': country_ips}
 
 # Main
 if action == 'start':
@@ -280,11 +329,7 @@ if action == 'start':
         print('ERROR: Failed to fetch lists, aborting start', file=stderr)
         exit(1)
     start()
-    whitelist_sets()
-    blacklist_sets(ip_data)
-    country_sets(ip_data)
-elif action == 'stop':
-    stop()
+    apply_nft_sets(ip_data)
 elif action == 'restart':
     ip_data = fetch_all_lists()
     if ip_data is None:
@@ -293,9 +338,7 @@ elif action == 'restart':
         exit(1)
     stop()
     start()
-    whitelist_sets()
-    blacklist_sets(ip_data)
-    country_sets(ip_data)
+    apply_nft_sets(ip_data)
 elif action == 'reload':
     ip_data = fetch_all_lists()
     if ip_data is None:
@@ -305,6 +348,4 @@ elif action == 'reload':
                  stdout=DEVNULL, stderr=DEVNULL, check=False)
     if result.returncode != 0:
         start()
-    whitelist_sets(reload=True)
-    blacklist_sets(ip_data, reload=True)
-    country_sets(ip_data, reload=True)
+    apply_nft_sets(ip_data, reload=True)
