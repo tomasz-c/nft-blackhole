@@ -74,7 +74,8 @@ git clone https://github.com/tomasz-c/nft-blackhole.git
 
 ##### Install files
 ```shell
-sudo cp -i nft-blackhole.conf /etc/
+sudo mkdir -p /etc/nft-blackhole
+sudo cp -i config.yaml /etc/nft-blackhole/
 sudo cp -i nft-blackhole.py   /usr/local/sbin/
 sudo mkdir /usr/share/nft-blackhole
 sudo cp -i nft-blackhole.template /usr/share/nft-blackhole/
@@ -90,7 +91,7 @@ Check for existing installation:
 
 ## Configuration
 #### Set the configuration in a file
-`/etc/nft-blackhole.conf`
+`/etc/nft-blackhole/config.yaml`
 
 ## Usage
 ### Manual

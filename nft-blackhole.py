@@ -15,6 +15,7 @@ from subprocess import run, DEVNULL
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from yaml import safe_load
 import time
+from os.path import exists
 
 desc = 'Daemon blocking IP addresses upon country or blacklist, using nftables'
 parser = argparse.ArgumentParser(description=desc)
@@ -32,8 +33,23 @@ if action == 'stop':
     exit(0)
 
 # Get config
-with open('/etc/nft-blackhole.conf') as cnf:
-    config = safe_load(cnf)
+config_path = '/etc/nft-blackhole/config.yaml'
+
+# BACKWARD COMPATIBILITY: Legacy configuration file path (/etc/nft-blackhole.conf).
+# Remove this block when migrating fully to /etc/nft-blackhole/config.yaml.
+legacy_config_path = '/etc/nft-blackhole.conf'
+if exists(legacy_config_path):
+    print(f'WARNING: Found legacy configuration file {legacy_config_path}. '
+          f'Please migrate your settings to {config_path} and remove {legacy_config_path}.', file=stderr)
+    config_path = legacy_config_path
+# END BACKWARD COMPATIBILITY
+
+try:
+    with open(config_path) as cnf:
+        config = safe_load(cnf)
+except OSError as exc:
+    print(f'ERROR: Failed to open configuration file {config_path}: {exc}', file=stderr)
+    exit(1)
 
 WHITELIST = config.get('WHITELIST', [])
 BLACKLIST = config.get('BLACKLIST', [])
